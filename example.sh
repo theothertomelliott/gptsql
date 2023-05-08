@@ -1,0 +1,1 @@
+POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost/demo?sslmode=disable go run .
