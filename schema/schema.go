@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 )
 
 func Load(db *sql.DB) (Schema, error) {
@@ -40,8 +41,9 @@ func (s Schema) String() string {
 
 // Table represents a table in a database
 type Table struct {
-	Name    string
-	Columns []Column
+	Name      string
+	Columns   []Column
+	SampleRow []string
 }
 
 // String returns the SQL query to create a table with its columns.
@@ -51,7 +53,8 @@ func (t Table) String() string {
 		columns = append(columns, fmt.Sprintf("%s %s", column.Name, column.Type))
 	}
 
-	return fmt.Sprintf("CREATE TABLE %s (%s)", t.Name, strings.Join(columns, ", "))
+	return fmt.Sprintf(`CREATE TABLE %s (%s)
+INSERT INTO %s VALUES (%s);`, t.Name, strings.Join(columns, ", "), t.Name, strings.Join(t.SampleRow, ", "))
 }
 
 // Column represents a column in a table
@@ -89,8 +92,60 @@ func describeTable(table string, db *sql.DB) (Table, error) {
 		rows.Scan(&column.Name, &column.Type)
 		columns = append(columns, column)
 	}
+
+	exampleRow, err := db.Query(fmt.Sprintf("SELECT * FROM %v LIMIT 1;", table))
+	if err != nil {
+		return Table{}, fmt.Errorf("loading example row: %w", err)
+	}
+	defer exampleRow.Close()
+	exampleRow.Next()
+	var values []interface{}
+	for i := 0; i < len(columns); i++ {
+		var value interface{}
+		values = append(values, &value)
+	}
+	err = exampleRow.Scan(values...)
+	if err != nil {
+		return Table{}, fmt.Errorf("scanning example row: %w", err)
+	}
+
+	var stringValues []string
+	for _, rvp := range values {
+		// Based on code from sqltocsv
+		rawValue := *rvp.(*interface{})
+		var value interface{}
+		byteArray, ok := rawValue.([]byte)
+		if ok {
+			value = string(byteArray)
+		} else {
+			value = rawValue
+		}
+
+		float64Value, ok := value.(float64)
+		if ok {
+			value = fmt.Sprintf("%v", float64Value)
+		} else {
+			float32Value, ok := value.(float32)
+			if ok {
+				value = fmt.Sprintf("%v", float32Value)
+			}
+		}
+
+		timeValue, ok := value.(time.Time)
+		if ok {
+			value = timeValue.Format(time.RFC1123)
+		}
+
+		if value == nil {
+			stringValues = append(stringValues, "")
+		} else {
+			stringValues = append(stringValues, fmt.Sprintf("%v", value))
+		}
+	}
+
 	return Table{
-		Name:    table,
-		Columns: columns,
+		Name:      table,
+		Columns:   columns,
+		SampleRow: stringValues,
 	}, nil
 }
