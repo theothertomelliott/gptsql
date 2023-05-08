@@ -29,6 +29,18 @@ func main() {
 	client := openai.NewClient(os.Getenv("OPENAI_API_TOKEN"))
 	conv := conversation.New(client, db, schema)
 
+	samples, err := conv.SampleQuestions()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Welcome to GPTSQL! Your schema has been read and you may ask questions like the below:")
+	fmt.Println()
+	for _, sample := range samples {
+		fmt.Println(sample)
+	}
+	fmt.Println()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Ask a question: ")
