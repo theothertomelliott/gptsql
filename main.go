@@ -60,6 +60,7 @@ func main() {
 			fmt.Println()
 			fmt.Println("Data sample:")
 			print5Lines(res.DataCsv)
+			fmt.Println()
 		} else {
 			break
 		}
@@ -75,5 +76,5 @@ func print5Lines(input string) {
 		return
 	}
 
-	fmt.Println(input[0:5])
+	fmt.Println(strings.Join(lines[0:5], "\n"))
 }
