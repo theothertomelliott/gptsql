@@ -69,10 +69,11 @@ func main() {
 
 // print5Lines prints the first 5 lines of the given string
 func print5Lines(input string) {
-	inputReader := bufio.NewReader(strings.NewReader(input))
-	scanner := bufio.NewScanner(inputReader)
-	for i := 0; i < 5; i++ {
-		scanner.Scan()
-		fmt.Println(scanner.Text())
+	lines := strings.Split(input, "\n")
+	if len(lines) <= 5 {
+		fmt.Println(input)
+		return
 	}
+
+	fmt.Println(input[0:5])
 }
