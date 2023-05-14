@@ -100,6 +100,7 @@ func (c *Conversation) Ask(req Request) (*Response, error) {
 		openai.ChatCompletionRequest{
 			Model:    model,
 			Messages: messages,
+			N:        3,
 		},
 	)
 
@@ -107,15 +108,19 @@ func (c *Conversation) Ask(req Request) (*Response, error) {
 		return nil, fmt.Errorf("ChatCompletion error: %w", err)
 	}
 
-	query := resp.Choices[0].Message.Content
-	res.Query = query
-
 	c.history = append(c.history, Exchange{
 		Request:  &req,
 		Response: res,
 	})
 
-	res.DataCsv, res.Error = c.execQuery(query)
+	for _, choice := range resp.Choices {
+		res.Query = choice.Message.Content
+		res.DataCsv, res.Error = c.execQuery(choice.Message.Content)
+		if res.Error == nil {
+			break
+		}
+	}
+
 	if res.Error != nil {
 		return nil, res.Error
 	}
