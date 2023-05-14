@@ -11,6 +11,8 @@ import (
 	"github.com/theothertomelliott/gptsql/schema"
 )
 
+const model = openai.GPT3Dot5Turbo0301
+
 func New(
 	client *openai.Client,
 	db *sql.DB,
@@ -40,27 +42,29 @@ type Response struct {
 	DataCsv string
 }
 
+func (c *Conversation) schemaPromptMessage() openai.ChatCompletionMessage {
+	return openai.ChatCompletionMessage{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: fmt.Sprintf("Use the following schema to answer questions\n\n%v\n\n", c.schema),
+	}
+}
+
 func (c *Conversation) SampleQuestions() ([]string, error) {
-	prompt := fmt.Sprintf(`
-	Given this schema
-
-	%v
-
-	Provide three example questions that may be answered using SQL queries against this database.
-	Ensure that these questions could be turned into SQL queries using only the schema provided.
-	Lean towards questions that aggregate data rather than expecting the user to specify values.
-	Do not provide the SQL queries themselves.
-	Output questions one per line.
-	`, c.schema)
-
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo0301,
+			Model: model,
 			Messages: []openai.ChatCompletionMessage{
+				c.schemaPromptMessage(),
 				{
-					Role:    openai.ChatMessageRoleAssistant,
-					Content: prompt,
+					Role: openai.ChatMessageRoleSystem,
+					Content: `
+					Provide three example questions that may be answered using SQL queries against this database.
+					Ensure that these questions could be turned into SQL queries using only the schema provided.
+					Lean towards questions that aggregate data rather than expecting the user to specify values.
+					Do not provide the SQL queries themselves.
+					Output questions one per line.
+					`,
 				},
 			},
 		},
@@ -78,21 +82,18 @@ func (c *Conversation) Ask(req Request) (*Response, error) {
 	res := &Response{}
 
 	prompt := fmt.Sprintf(`
-	Given this schema
-	
-	%v
-	
 	Write a SQL query to answer the following question. Use only the content of the schema provided.
 	Avoid queries with placeholders. Only output the query, please do not explain it:
-	%v`, c.schema, req.Question)
+	%v`, req.Question)
 
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo0301,
+			Model: model,
 			Messages: []openai.ChatCompletionMessage{
+				c.schemaPromptMessage(),
 				{
-					Role:    openai.ChatMessageRoleAssistant,
+					Role:    openai.ChatMessageRoleUser,
 					Content: prompt,
 				},
 			},

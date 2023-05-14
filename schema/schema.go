@@ -98,15 +98,17 @@ func describeTable(table string, db *sql.DB) (Table, error) {
 		return Table{}, fmt.Errorf("loading example row: %w", err)
 	}
 	defer exampleRow.Close()
-	exampleRow.Next()
 	var values []interface{}
-	for i := 0; i < len(columns); i++ {
-		var value interface{}
-		values = append(values, &value)
-	}
-	err = exampleRow.Scan(values...)
-	if err != nil {
-		return Table{}, fmt.Errorf("scanning example row: %w", err)
+	// Read exactly one row, assuming there are any
+	for exampleRow.Next() && len(values) == 0 {
+		for i := 0; i < len(columns); i++ {
+			var value interface{}
+			values = append(values, &value)
+		}
+		err = exampleRow.Scan(values...)
+		if err != nil {
+			return Table{}, fmt.Errorf("scanning example row: %w", err)
+		}
 	}
 
 	var stringValues []string
