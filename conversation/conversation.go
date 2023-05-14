@@ -35,15 +35,6 @@ type Conversation struct {
 	history []Exchange
 }
 
-type Request struct {
-	Question string
-}
-
-type Response struct {
-	Query   string
-	DataCsv string
-}
-
 func (c *Conversation) schemaPromptMessage() openai.ChatCompletionMessage {
 	return openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
@@ -83,22 +74,32 @@ func (c *Conversation) SampleQuestions() ([]string, error) {
 func (c *Conversation) Ask(req Request) (*Response, error) {
 	res := &Response{}
 
-	prompt := fmt.Sprintf(`
-	Write a SQL query to answer the following question. Use only the content of the schema provided.
-	Avoid queries with placeholders. Only output the query, please do not explain it:
-	%v`, req.Question)
+	var messages []openai.ChatCompletionMessage
+	messages = append(messages, c.schemaPromptMessage())
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role: openai.ChatMessageRoleSystem,
+		Content: `You are a chatbot that answers questions about a database in the form of SQL queries.
+		You will only use the content from the schema provided to answer questions.
+		Avoid queries with placeholders.`,
+	})
+
+	for _, exchange := range c.history {
+		messages = append(messages, exchange.toMessages()...)
+	}
+
+	messages = append(messages, openai.ChatCompletionMessage{
+		Role: openai.ChatMessageRoleUser,
+		Content: fmt.Sprintf(
+			"Please answer this question in the form of an SQL query, do not explain your response:\n%v",
+			req.Question,
+		),
+	})
 
 	resp, err := c.client.CreateChatCompletion(
 		context.Background(),
 		openai.ChatCompletionRequest{
-			Model: model,
-			Messages: []openai.ChatCompletionMessage{
-				c.schemaPromptMessage(),
-				{
-					Role:    openai.ChatMessageRoleUser,
-					Content: prompt,
-				},
-			},
+			Model:    model,
+			Messages: messages,
 		},
 	)
 
@@ -108,21 +109,27 @@ func (c *Conversation) Ask(req Request) (*Response, error) {
 
 	query := resp.Choices[0].Message.Content
 	res.Query = query
-	res.DataCsv, err = c.execQuery(query)
-	if err != nil {
-		return nil, err
-	}
 
 	c.history = append(c.history, Exchange{
 		Request:  &req,
 		Response: res,
 	})
+
+	res.DataCsv, res.Error = c.execQuery(query)
+	if res.Error != nil {
+		return nil, res.Error
+	}
 	return res, nil
 }
 
-type Exchange struct {
-	Request  *Request
-	Response *Response
+// upTo5Lines returns up to the first 5 lines of the given string
+func upTo5Lines(input string) string {
+	lines := strings.Split(input, "\n")
+	if len(lines) <= 5 {
+		return input
+	}
+
+	return strings.Join(lines[0:5], "\n")
 }
 
 // execQuery runs a db query and prints the results in csv format
@@ -135,7 +142,7 @@ func (c *Conversation) execQuery(query string) (string, error) {
 
 	out, err := sqltocsv.WriteString(rows)
 	if err != nil {
-		return "", fmt.Errorf("Rendering to csv: %w", err)
+		return "", fmt.Errorf("rendering query: %w", err)
 	}
 	return out, nil
 }
