@@ -16,6 +16,7 @@ const model = openai.GPT3Dot5Turbo0301
 func New(
 	client *openai.Client,
 	db *sql.DB,
+	dbType string,
 	schema schema.Schema,
 ) *Conversation {
 	return &Conversation{
@@ -29,6 +30,7 @@ type Conversation struct {
 	client *openai.Client
 	schema schema.Schema
 	db     *sql.DB
+	dbType string
 
 	history []Exchange
 }
@@ -45,7 +47,7 @@ type Response struct {
 func (c *Conversation) schemaPromptMessage() openai.ChatCompletionMessage {
 	return openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleAssistant,
-		Content: fmt.Sprintf("Use the following schema to answer questions\n\n%v\n\n", c.schema),
+		Content: fmt.Sprintf("Use the following schema to answer questions\nThe database type is %v\n\n%v\n\n", c.dbType, c.schema),
 	}
 }
 

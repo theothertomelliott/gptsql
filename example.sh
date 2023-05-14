@@ -1,1 +1,2 @@
-POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost/demo?sslmode=disable go run .
+export POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost/postgres?sslmode=disable
+go run .

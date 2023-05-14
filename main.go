@@ -10,24 +10,44 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/sashabaranov/go-openai"
+	sf "github.com/snowflakedb/gosnowflake"
 	"github.com/theothertomelliott/gptsql/conversation"
 	"github.com/theothertomelliott/gptsql/schema"
 )
 
 func main() {
-	// Connect to database
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_CONN_STRING"))
+	var dsn, dbType string
+	var err error
+
+	if os.Getenv("POSTGRES_CONN_STRING") != "" {
+		dsn = os.Getenv("POSTGRES_CONN_STRING")
+		dbType = "postgres"
+	}
+
+	if os.Getenv("SNOWFLAKE_ACCOUNT") != "" {
+		dsn, _, err = getSnowflakeDSN()
+		if err != nil {
+			log.Fatal(err)
+		}
+		dbType = "snowflake"
+	}
+
+	if dsn == "" {
+		log.Fatal("No database connection config was provided.")
+	}
+
+	db, err := sql.Open(dbType, dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	schema, err := schema.Load(db)
+	schema, err := schema.Load(dbType, db)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	client := openai.NewClient(os.Getenv("OPENAI_API_TOKEN"))
-	conv := conversation.New(client, db, schema)
+	conv := conversation.New(client, db, dbType, schema)
 
 	samples, err := conv.SampleQuestions()
 	if err != nil {
@@ -53,7 +73,8 @@ func main() {
 				Question: text,
 			})
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
+				continue
 			}
 
 			fmt.Println(res.Query)
@@ -77,4 +98,23 @@ func print5Lines(input string) {
 	}
 
 	fmt.Println(strings.Join(lines[0:5], "\n"))
+}
+
+// getSnowflakeDSN constructs a DSN based on the test connection parameters
+func getSnowflakeDSN() (string, *sf.Config, error) {
+	cfg := &sf.Config{
+		Authenticator: sf.AuthTypeExternalBrowser,
+		Account:       os.Getenv("SNOWFLAKE_ACCOUNT"),
+		User:          os.Getenv("SNOWFLAKE_USER"),
+	}
+
+	if os.Getenv("SNOWFLAKE_DATABASE") != "" {
+		cfg.Database = os.Getenv("SNOWFLAKE_DATABASE")
+	}
+	if os.Getenv("SNOWFLAKE_SCHEMA") != "" {
+		cfg.Schema = os.Getenv("SNOWFLAKE_SCHEMA")
+	}
+
+	dsn, err := sf.DSN(cfg)
+	return dsn, cfg, err
 }
