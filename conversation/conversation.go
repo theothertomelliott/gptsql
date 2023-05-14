@@ -11,7 +11,7 @@ import (
 	"github.com/theothertomelliott/gptsql/schema"
 )
 
-const model = openai.GPT3Dot5Turbo0301
+const model = openai.GPT3Dot5Turbo
 
 func New(
 	client *openai.Client,
