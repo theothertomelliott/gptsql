@@ -21,6 +21,7 @@ var _ Server = &client{}
 type client struct {
 	client *http.Client
 
+	newConversationEndpoint endpoint.Endpoint
 	sampleQuestionsEndpoint endpoint.Endpoint
 	askEndpoint             endpoint.Endpoint
 }
@@ -29,6 +30,25 @@ func NewClient(host string) *client {
 	c := &client{
 		client: http.DefaultClient,
 	}
+
+	newConversationURL, err := url.Parse(fmt.Sprintf("%v/new", host))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	c.newConversationEndpoint = httptransport.NewClient(
+		"GET",
+		newConversationURL,
+		encodeRequest,
+		func(_ context.Context, r *http.Response) (interface{}, error) {
+			var response NewConversationResponse
+			if err := json.NewDecoder(r.Body).Decode(&response); err != nil {
+				fmt.Println("Error decoding response body: ", err)
+				return nil, err
+			}
+			return response, nil
+		},
+	).Endpoint()
 
 	sampleQuestionsURL, err := url.Parse(fmt.Sprintf("%v/sample-questions", host))
 	if err != nil {
@@ -71,8 +91,28 @@ func NewClient(host string) *client {
 	return c
 }
 
-func (c *client) SampleQuestions() ([]string, error) {
-	response, err := c.sampleQuestionsEndpoint(context.Background(), SampleQuestionsRequest{})
+func (c *client) NewConversation() (ConversationID, error) {
+	response, err := c.newConversationEndpoint(
+		context.Background(),
+		NewConversationRequest{},
+	)
+	if err != nil {
+		return "", err
+	}
+	resp := response.(NewConversationResponse)
+	if resp.Err != "" {
+		return "", fmt.Errorf(resp.Err)
+	}
+	return ConversationID(resp.ConversationID), nil
+}
+
+func (c *client) SampleQuestions(cid ConversationID) ([]string, error) {
+	response, err := c.sampleQuestionsEndpoint(
+		context.Background(),
+		SampleQuestionsRequest{
+			ConversationID: string(cid),
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -83,10 +123,14 @@ func (c *client) SampleQuestions() ([]string, error) {
 	return resp.Questions, nil
 }
 
-func (c *client) Ask(question string) (*conversation.Response, error) {
-	response, err := c.askEndpoint(context.Background(), AskRequest{
-		Question: question,
-	})
+func (c *client) Ask(cid ConversationID, question string) (*conversation.Response, error) {
+	response, err := c.askEndpoint(
+		context.Background(),
+		AskRequest{
+			ConversationID: string(cid),
+			Question:       question,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}

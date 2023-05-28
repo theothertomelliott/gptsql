@@ -12,9 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/sashabaranov/go-openai"
 	sf "github.com/snowflakedb/gosnowflake"
-	"github.com/theothertomelliott/gptsql/conversation"
 	"github.com/theothertomelliott/gptsql/conversation/server"
-	"github.com/theothertomelliott/gptsql/schema"
 )
 
 func main() {
@@ -43,18 +41,16 @@ func main() {
 		log.Fatal(err)
 	}
 
-	schema, err := schema.Load(dbType, db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	client := openai.NewClient(os.Getenv("OPENAI_API_TOKEN"))
-	conv := conversation.New(client, db, dbType, schema)
 
-	svr := server.New(conv)
+	svr := server.New(client, db, dbType)
 
 	go func() {
 		mux := http.NewServeMux()
+
+		newConversationHandler := server.GetNewConversationHandler(svr)
+		mux.Handle("/new", newConversationHandler)
+
 		askHandler := server.GetAskHandler(svr)
 		mux.Handle("/ask", askHandler)
 
@@ -67,7 +63,13 @@ func main() {
 	}()
 
 	c := server.NewClient("http://localhost:8080")
-	samples, err := c.SampleQuestions()
+
+	cid, err := c.NewConversation()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	samples, err := c.SampleQuestions(cid)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -87,7 +89,7 @@ func main() {
 		// Holds the string that scanned
 		text := scanner.Text()
 		if len(text) != 0 {
-			res, err := c.Ask(text)
+			res, err := c.Ask(cid, text)
 			if err != nil {
 				log.Println(err)
 				continue
