@@ -16,9 +16,9 @@ type Request struct {
 }
 
 type Response struct {
-	Query   string
-	DataCsv string
-	Error   error
+	Query   string `json:"query"`
+	DataCsv string `json:"data_csv"`
+	Error   error  `json:"error,omitempty"`
 }
 
 func (e *Exchange) toMessages() []openai.ChatCompletionMessage {
