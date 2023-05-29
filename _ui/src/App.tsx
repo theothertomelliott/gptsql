@@ -17,7 +17,6 @@ function App() {
     }
     child = <NewConversation clicked={newConversationHandler} />
   } else if (error !== "") {
-    console.log(error);
     child = <p>{JSON.stringify(error)}</p>
   } else {
     let addMessage = function(question: string, message: message) {
@@ -28,7 +27,7 @@ function App() {
             question: question,
             query: message.query,
             data_csv: message.data_csv,
-            error: message.error,
+            err: message.err,
           },
         ]
       )

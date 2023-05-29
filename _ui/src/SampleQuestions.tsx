@@ -40,7 +40,7 @@ function SampleQuestions({conversationid}: {conversationid: string}) {
   
     return <div className="uk-card uk-card-default uk-card-body uk-margin">
       <p>Welcome to GPTSQL! Your schema has been read and you may ask questions like the below:</p>
-      <ul>
+      <ul className="uk-list">
         {questionList}
       </ul>
     </div>;
