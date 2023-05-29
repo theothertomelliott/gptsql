@@ -1,4 +1,5 @@
 import Conversation from './Conversation';
+import { QuestionInput } from './Conversation';
 import type { message } from './Conversation';
 import { useState } from 'react';
 
@@ -6,6 +7,9 @@ function App() {
   const [conversationID, setConversationID] = useState("");
   const [error, setError] = useState("");
   const [messages, setMessages] = useState<any[]>([]);
+
+  const [loading, setLoading] = useState(false);
+  
   let child: JSX.Element = <div></div>;
   if (conversationID === "") {
     let newConversationHandler = function() {
@@ -30,9 +34,28 @@ function App() {
       )
     }
     let sendQuestion = function(question: string) {
-      sendNewQuestion(question, conversationID, addMessage, setError);
+      setLoading(true);
+      const doAddMessage = function(question: string, message: message) {
+        addMessage(question, message);
+        setLoading(false);
+      }
+      const doSetError = function(error: string) {
+        setError(error);
+        setLoading(false);
+      }
+      sendNewQuestion(question, conversationID, doAddMessage, doSetError);
     }
-    child = <Conversation conversationid={conversationID} sendQuestion={sendQuestion} messages={messages} />
+
+    let loadingUI = <></>;
+    if (loading) {
+      loadingUI = <div className="uk-placeholder"><div data-uk-spinner></div>&nbsp;Finding your answer...</div>
+    }
+
+    child = <>
+      <Conversation conversationid={conversationID} messages={messages} />
+      {loadingUI}
+      <QuestionInput sendQuestion={sendQuestion} /> 
+    </>
   }
 
   return (
