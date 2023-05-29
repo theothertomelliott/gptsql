@@ -3,6 +3,6 @@ export REACT_APP_ENVIRONMENT="development"
 export NODE_ENV="development"
 
 pushd _ui
-npm run build:dev
+npm run build
 popd
 go run .
