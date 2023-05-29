@@ -32,13 +32,13 @@ function SampleQuestions({conversationid}: {conversationid: string}) {
     }
   
     if (loading) {
-      return <div>Loading sample questions...</div>
+      return <div className="uk-placeholder"><div data-uk-spinner></div>&nbsp;Loading sample questions...</div>
     }
   
     const questionList = questions.map((question, index)=>
       <li key={index}>{question}</li>);  
   
-    return <div>
+    return <div className="uk-card uk-card-default uk-card-body uk-margin">
       <p>Welcome to GPTSQL! Your schema has been read and you may ask questions like the below:</p>
       <ul>
         {questionList}

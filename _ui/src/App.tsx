@@ -1,5 +1,5 @@
-import './App.css';
 import Conversation from './Conversation';
+import type { message } from './Conversation';
 import { useState } from 'react';
 
 function App() {
@@ -16,11 +16,16 @@ function App() {
     console.log(error);
     child = <p>{JSON.stringify(error)}</p>
   } else {
-    let addMessage = function(message: message) {
+    let addMessage = function(question: string, message: message) {
       setMessages(
         [
           ...messages,
-          message,
+          {
+            question: question,
+            query: message.query,
+            data_csv: message.data_csv,
+            error: message.error,
+          },
         ]
       )
     }
@@ -31,19 +36,19 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>
-          GPTSQL
-        </h1>
-        {child}
-      </header>
+    <div className="App uk-container">
+      <h1>
+        GPTSQL
+      </h1>
+      {child}
     </div>
   );
 }
 
 function NewConversation({clicked}: {clicked: () => void}) {
-  return <button onClick={clicked}>New Conversation</button>
+  return <div className="uk-card uk-card-default uk-card-body">
+      <button className="uk-button uk-button-default uk-width-1-1" onClick={clicked}>New Conversation</button>
+    </div>;
 }
 
 
@@ -66,7 +71,7 @@ function createNewConversation(
 function sendNewQuestion(
   question: string, 
   conversationID: string,
-  addMessage: (value: message) => void,
+  addMessage: (question: string, msg: message) => void,
   setError: (value: string) => void
   ) {
   console.log("Sending question: " + question);
@@ -81,17 +86,12 @@ function sendNewQuestion(
   .then(
     (result) => {
       console.log(result);
-      addMessage(result);
+      addMessage(question, result);
     },
     (error) => {
       setError(error);
     }
   )
-}
-
-type message = {
-  query: string,
-  data_csv: string
 }
 
 export default App;
