@@ -85,11 +85,7 @@ func GetNewConversationHandler(svc Server) *httptransport.Server {
 	return httptransport.NewServer(
 		makeNewConversationEndpoint(svc),
 		func(_ context.Context, r *http.Request) (interface{}, error) {
-			var request NewConversationRequest
-			if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-				return nil, err
-			}
-			return request, nil
+			return NewConversationRequest{}, nil
 		},
 		func(_ context.Context, w http.ResponseWriter, response interface{}) error {
 			return json.NewEncoder(w).Encode(response)

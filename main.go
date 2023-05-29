@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 
@@ -48,6 +50,11 @@ func main() {
 	go func() {
 		mux := http.NewServeMux()
 
+		remote, err := url.Parse("http://localhost:3000")
+		if err != nil {
+			panic(err)
+		}
+
 		newConversationHandler := server.GetNewConversationHandler(svr)
 		mux.Handle("/new", newConversationHandler)
 
@@ -56,6 +63,11 @@ func main() {
 
 		sampleQuestionsHandler := server.GetSampleQuestionsHandler(svr)
 		mux.Handle("/sample-questions", sampleQuestionsHandler)
+
+		proxy := httputil.NewSingleHostReverseProxy(remote)
+		mux.Handle("/", proxy)
+
+		// mux.HandleFunc("/", handleStatic)
 
 		if err := http.ListenAndServe(":8080", mux); err != nil {
 			log.Println("server failed:", err)
