@@ -8,7 +8,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"strings"
 
 	_ "github.com/lib/pq"
 	"github.com/sashabaranov/go-openai"
@@ -79,17 +78,6 @@ func main() {
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Println("server failed:", err)
 	}
-}
-
-// print5Lines prints the first 5 lines of the given string
-func print5Lines(input string) {
-	lines := strings.Split(input, "\n")
-	if len(lines) <= 5 {
-		fmt.Println(input)
-		return
-	}
-
-	fmt.Println(strings.Join(lines[0:5], "\n"))
 }
 
 // getSnowflakeDSN constructs a DSN based on the test connection parameters
