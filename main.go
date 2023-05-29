@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"database/sql"
 	"fmt"
 	"log"
@@ -19,7 +18,12 @@ import (
 
 func main() {
 	var dsn, dbType string
+	var useDevFrontEnd bool
 	var err error
+
+	if os.Getenv("USE_DEV_FRONTEND") != "" {
+		useDevFrontEnd = true
+	}
 
 	if os.Getenv("POSTGRES_CONN_STRING") != "" {
 		dsn = os.Getenv("POSTGRES_CONN_STRING")
@@ -47,75 +51,31 @@ func main() {
 
 	svr := server.New(client, db, dbType)
 
-	go func() {
-		mux := http.NewServeMux()
+	mux := http.NewServeMux()
 
+	newConversationHandler := server.GetNewConversationHandler(svr)
+	mux.Handle("/new", newConversationHandler)
+
+	askHandler := server.GetAskHandler(svr)
+	mux.Handle("/ask", askHandler)
+
+	sampleQuestionsHandler := server.GetSampleQuestionsHandler(svr)
+	mux.Handle("/sample-questions", sampleQuestionsHandler)
+
+	if useDevFrontEnd {
 		remote, err := url.Parse("http://localhost:3000")
 		if err != nil {
 			panic(err)
 		}
 
-		newConversationHandler := server.GetNewConversationHandler(svr)
-		mux.Handle("/new", newConversationHandler)
-
-		askHandler := server.GetAskHandler(svr)
-		mux.Handle("/ask", askHandler)
-
-		sampleQuestionsHandler := server.GetSampleQuestionsHandler(svr)
-		mux.Handle("/sample-questions", sampleQuestionsHandler)
-
 		proxy := httputil.NewSingleHostReverseProxy(remote)
 		mux.Handle("/", proxy)
-
-		// mux.HandleFunc("/", handleStatic)
-
-		if err := http.ListenAndServe(":8080", mux); err != nil {
-			log.Println("server failed:", err)
-		}
-	}()
-
-	c := server.NewClient("http://localhost:8080")
-
-	cid, err := c.NewConversation()
-	if err != nil {
-		log.Fatal(err)
+	} else {
+		mux.HandleFunc("/", handleStatic)
 	}
 
-	samples, err := c.SampleQuestions(cid)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Welcome to GPTSQL! Your schema has been read and you may ask questions like the below:")
-	fmt.Println()
-	for _, sample := range samples {
-		fmt.Println(sample)
-	}
-	fmt.Println()
-
-	scanner := bufio.NewScanner(os.Stdin)
-	for {
-		fmt.Print("Ask a question: ")
-		// Scans a line from Stdin(Console)
-		scanner.Scan()
-		// Holds the string that scanned
-		text := scanner.Text()
-		if len(text) != 0 {
-			res, err := c.Ask(cid, text)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-
-			fmt.Println(res.Query)
-			fmt.Println()
-			fmt.Println("Data sample:")
-			print5Lines(res.DataCsv)
-			fmt.Println()
-		} else {
-			break
-		}
-
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Println("server failed:", err)
 	}
 }
 
