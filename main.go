@@ -74,6 +74,8 @@ func main() {
 		mux.HandleFunc("/", handleStatic)
 	}
 
+	fmt.Println("Listening on :8080")
+
 	if err := http.ListenAndServe(":8080", mux); err != nil {
 		log.Println("server failed:", err)
 	}
