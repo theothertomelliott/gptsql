@@ -1,5 +1,7 @@
 import SampleQuestions from './SampleQuestions';
 import { useState } from 'react';
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 type message = {
     question: string,
@@ -13,7 +15,9 @@ function Conversation({conversationid, messages}: {conversationid: string, messa
         let content = <>
             <div className="uk-margin-bottom">
                 <h3>SQL Query</h3>
-                <div>{message.query}</div>
+                <SyntaxHighlighter language="sql" style={docco}>
+                    {message.query}
+                </SyntaxHighlighter>
             </div>
             <div>
                 <h3>Result</h3>
