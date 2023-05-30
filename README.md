@@ -4,7 +4,12 @@ An experiment to generate working SQL queries for real databases from natural la
 
 It uses GPT-3 (via the OpenAI API) to generate SQL queries based on a user question, and then runs them against the database to get the real results.
 
-Currently, only Postgres databases are supported.
+## Database Support
+
+GPT SQL currently supports the following database types:
+
+* Postgres
+* Snowflake (documentation to come)
 
 ## Quickstart
 
