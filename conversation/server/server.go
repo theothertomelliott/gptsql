@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/go-kit/kit/endpoint"
@@ -35,27 +34,24 @@ type conversationServer struct {
 	client *openai.Client
 	db     *sql.DB
 	dbType string
+	schema schema.Schema
 }
 
-func New(client *openai.Client, db *sql.DB, dbType string) Server {
+func New(client *openai.Client, db *sql.DB, dbType string, schema schema.Schema) Server {
 	return &conversationServer{
 		conversations: make(map[ConversationID]*conversation.Conversation),
 
 		client: client,
 		db:     db,
 		dbType: dbType,
+		schema: schema,
 	}
 }
 
 func (s *conversationServer) NewConversation() (ConversationID, error) {
 	cid := ConversationID(uuid.New().String())
 
-	schema, err := schema.Load(s.dbType, s.db)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s.conversations[cid] = conversation.New(s.client, s.db, s.dbType, schema)
+	s.conversations[cid] = conversation.New(s.client, s.db, s.dbType, s.schema)
 	return cid, nil
 }
 

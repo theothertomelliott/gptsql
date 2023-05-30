@@ -13,6 +13,7 @@ import (
 	"github.com/sashabaranov/go-openai"
 	sf "github.com/snowflakedb/gosnowflake"
 	"github.com/theothertomelliott/gptsql/conversation/server"
+	"github.com/theothertomelliott/gptsql/schema"
 )
 
 func main() {
@@ -46,9 +47,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	schema, err := schema.Load(dbType, db)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	client := openai.NewClient(os.Getenv("OPENAI_API_TOKEN"))
 
-	svr := server.New(client, db, dbType)
+	svr := server.New(client, db, dbType, schema)
 
 	mux := http.NewServeMux()
 

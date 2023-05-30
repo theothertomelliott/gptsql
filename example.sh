@@ -2,6 +2,7 @@ export POSTGRES_CONN_STRING=postgresql://postgres:postgres@localhost/demo?sslmod
 export USE_DEV_FRONTEND="true"
 
 pushd _ui
+npm install
 npm run build
 popd
 go run .
